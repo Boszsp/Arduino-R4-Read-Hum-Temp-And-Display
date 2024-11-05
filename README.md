@@ -1,5 +1,14 @@
 # Arduino-R4-Read-Hum-Temp-And-Display
 Arduino R4 Read Hum Temp And Display With Adafruit Lib
+
+## Pre Requirement
+install library follow this
+<img width="1136" alt="image" src="https://github.com/user-attachments/assets/3c9e05d4-1a2e-4d6f-aa27-1ae21120e116">
+<img width="1136" alt="image" src="https://github.com/user-attachments/assets/bc578d76-1e69-4aea-bb4f-ade10d6bbdfc">
+<img width="1136" alt="image" src="https://github.com/user-attachments/assets/5e23b5db-6f78-4ccc-b167-8231a4b251e4">
+
+
+
 ## Connection With Sensor Guide
 + Pattern
   + `Sensor` -> `Arduino`
