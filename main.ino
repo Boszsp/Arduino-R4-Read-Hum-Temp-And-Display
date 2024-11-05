@@ -1,91 +1,100 @@
-#include <Arduino.h>
-#include <Wire.h>
-#include "Adafruit_SHT31.h"
-#include <LCDI2C_Multilingual.h>
+#include <WiFiS3.h>
 
-LCDI2C_Symbols lcd(0x27, 16, 2);           // I2C address: 0x27; Display size: 16x2
-
-bool enableHeater = false;
-uint8_t loopCnt = 0;
-
-Adafruit_SHT31 sht31 = Adafruit_SHT31();
+#include "arduino_secrets.h" 
+///////please enter your sensitive data in the Secret tab/arduino_secrets.h
+char ssid[] = SECRET_SSID;        // your network SSID (name)
+char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
+int status = WL_IDLE_STATUS;     // the WiFi radio's status
 
 void setup() {
+  //Initialize serial and wait for port to open:
   Serial.begin(9600);
-
-  lcd.init();
-  lcd.backlight();
-
-  while (!Serial)
-    delay(10);     // will pause Zero, Leonardo, etc until serial console opens
-
-  Serial.println("SHT31 test");
-  if (! sht31.begin(0x44)) {   // Set to 0x44, 0x45 for alternate i2c addr
-    Serial.println("Couldn't find SHT31");
-    while (1) delay(1);
+  while (!Serial) {
+    ; // wait for serial port to connect. Needed for native USB port only
   }
 
-  Serial.print("Heater Enabled State: ");
-  if (sht31.isHeaterEnabled())
-    Serial.println("ENABLED");
-  else
-    Serial.println("DISABLED");
-}
-
-void displayToLcd(String line1,String line2){
-  lcd.setCursor(0,0); 
-   //lcd.println("Temperature:25°C" , line1);
-  lcd.println(line1);
-  lcd.println(line2);
-}
-
-struct tempAndHumStruct {
-  float temp;
-  float hum;
-};
-
-void  getTempAndHum(struct tempAndHumStruct *source){
-  float t = sht31.readTemperature();
-  float h = sht31.readHumidity();
-
-  if (! isnan(t)&&! isnan(h)) {  // check if 'is not a number'
-  
- // Serial.print("Temp *C = "); Serial.print(t); Serial.print("\t\t");
-   source->temp = t;
-   source->hum = h;
-  } else { 
-   // Serial.println("Failed to read temperature");
+  // check for the WiFi module:
+  if (WiFi.status() == WL_NO_MODULE) {
+    Serial.println("Communication with WiFi module failed!");
+    // don't continue
+    while (true);
   }
 
-
-  delay(1000);
-
-  // Toggle heater enabled state every 30 seconds
-  // An ~3.0 degC temperature increase can be noted when heater is enabled
-  if (loopCnt >= 30) {
-    enableHeater = !enableHeater;
-    sht31.heater(enableHeater);
-    Serial.print("Heater Enabled State: ");
-    if (sht31.isHeaterEnabled())
-      Serial.println("ENABLED");
-    else
-      Serial.println("DISABLED");
-
-    loopCnt = 0;
+  String fv = WiFi.firmwareVersion();
+  if (fv < WIFI_FIRMWARE_LATEST_VERSION) {
+    Serial.println("Please upgrade the firmware");
   }
-  loopCnt++;
+
+  // attempt to connect to WiFi network:
+  while (status != WL_CONNECTED) {
+    Serial.print("Attempting to connect to WPA SSID: ");
+    Serial.println(ssid);
+    // Connect to WPA/WPA2 network:
+    status = WiFi.begin(ssid, pass);
+
+    // wait 10 seconds for connection:
+    delay(10000);
+  }
+
+  // you're connected now, so print out the data:
+  Serial.print("You're connected to the network");
+  printCurrentNet();
+  printWifiData();
+
 }
 
 void loop() {
-  struct tempAndHumStruct tempAndHum;
-  getTempAndHum(&tempAndHum);
-  Serial.println("Temp");
-  Serial.print(tempAndHum.temp);
-  Serial.print("Hum");
-  Serial.print(tempAndHum.hum);
-  char buff1[16], buff2[16];
-  snprintf (buff1, sizeof(buff1), "Temp:   %.2f°C", tempAndHum.temp);
-  snprintf (buff2, sizeof(buff2), "Hum :   %.2f", tempAndHum.hum);
-  displayToLcd(buff1,buff2);
+  // check the network connection once every 10 seconds:
+  delay(10000);
+  printCurrentNet();
+}
 
+void printWifiData() {
+  // print your board's IP address:
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Address: ");
+  
+  Serial.println(ip);
+
+  // print your MAC address:
+  byte mac[6];
+  WiFi.macAddress(mac);
+  Serial.print("MAC address: ");
+  printMacAddress(mac);
+}
+
+void printCurrentNet() {
+  // print the SSID of the network you're attached to:
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+
+  // print the MAC address of the router you're attached to:
+  byte bssid[6];
+  WiFi.BSSID(bssid);
+  Serial.print("BSSID: ");
+  printMacAddress(bssid);
+
+  // print the received signal strength:
+  long rssi = WiFi.RSSI();
+  Serial.print("signal strength (RSSI):");
+  Serial.println(rssi);
+
+  // print the encryption type:
+  byte encryption = WiFi.encryptionType();
+  Serial.print("Encryption Type:");
+  Serial.println(encryption, HEX);
+  Serial.println();
+}
+
+void printMacAddress(byte mac[]) {
+  for (int i = 0; i < 6; i++) {
+    if (i > 0) {
+      Serial.print(":");
+    }
+    if (mac[i] < 16) {
+      Serial.print("0");
+    }
+    Serial.print(mac[i], HEX);
+  }
+  Serial.println();
 }
